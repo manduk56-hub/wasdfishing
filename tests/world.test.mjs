@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WORLD, CAST_ORIGIN, RETURN_POINT, moveHook, cameraForHook, screenToWorld, onScreen, regionAt } from '../world.js';
-import { createFishPool, createCast, stepFishing } from '../fishing.js';
+import { createFishPool, createCast, stepFishing, submitDirection } from '../fishing.js';
 import { initialState, stats } from '../game-core.js';
 
 test('exploration travels beyond the former screen while the hook stays centered',()=>{
@@ -46,6 +46,7 @@ test('a deep-world fish can be captured and reeled back to the original boat',()
   for(let i=1;i<2000;i++){
     const event=stepFishing([fish],run,hook,state,.05,i*.05,i*50);
     if(event)events.push(event.type);
+    if(run.phase==='challenge'){const input=submitDirection([fish],run,run.challenge.sequence[run.challenge.index],state);if(input)events.push(input.type);}
     if(run.phase==='done')break;
   }
   assert.equal(state.catches[fish.species.id],1);

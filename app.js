@@ -1,4 +1,4 @@
-import { createFishPool, createCast, stepFishing } from './fishing.js';
+import { createFishPool, createCast, stepFishing, submitDirection } from './fishing.js';
 import { CAST_ORIGIN, RETURN_POINT, cameraForHook, screenToWorld, moveHook, onScreen, regionAt } from './world.js';
 import { drawWorld, drawMinimap } from './world-renderer.js';
 import { loadFishAtlas } from './fish-atlas.js';
@@ -108,8 +108,8 @@ function drawEquipment(){
   });
 }
 function renderGear() {
-  $('gear-content').innerHTML = `<h2 class="subheading">낚싯대 <span class="mini-label">RODS</span></h2><div class="gear-grid">${RODS.map((rod,i) => `<article class="gear-card ${i === state.rod ? 'selected' : ''}"><span class="mini-label">${['STARTER','EXPLORER','DEEP SEA'][i]}</span><div class="gear-art"><canvas class="equipment-preview" data-prop="rod" width="300" height="180" aria-label="낚싯대 도트 그림"></canvas></div><h3>${rod.name}</h3><p>${rod.sub}</p><div class="gear-specs"><span>속도 ${rod.speed}</span><span>포획력 ×${rod.grip}</span></div><button class="button ${i === state.rod ? '' : 'dark'}" data-buy="rod" data-index="${i}" ${i === state.rod || (!state.rods.includes(i) && state.coins < rod.cost) ? 'disabled' : ''}>${i === state.rod ? '사용 중' : state.rods.includes(i) ? '장착하기' : `✦ ${format(rod.cost)} · 구매`}</button></article>`).join('')}</div>
-    <div class="upgrade-panel"><div><h3>낚싯대 강화 <span class="tag">+${state.upgrade} / 10</span></h3><p>강화당 이동 속도 +3.5%, 포획력 +7%, 도주 대기 -2.5%.<br>강화 효과는 낚싯대를 교체해도 유지돼요.</p></div><button class="button dark" data-action="upgrade" ${state.upgrade >= 10 || state.coins < upgradeCost(state) ? 'disabled' : ''}>${state.upgrade >= 10 ? '최대 강화 달성' : `✦ ${format(upgradeCost(state))} · 강화하기`}</button></div>
+  $('gear-content').innerHTML = `<h2 class="subheading">낚싯대 <span class="mini-label">RODS</span></h2><div class="gear-grid">${RODS.map((rod,i) => `<article class="gear-card ${i === state.rod ? 'selected' : ''}"><span class="mini-label">${['STARTER','EXPLORER','DEEP SEA'][i]}</span><div class="gear-art"><canvas class="equipment-preview" data-prop="rod" width="300" height="180" aria-label="낚싯대 도트 그림"></canvas></div><h3>${rod.name}</h3><p>${rod.sub}</p><div class="gear-specs"><span>속도 ${rod.speed}</span><span>안정성 ×${rod.grip}</span></div><button class="button ${i === state.rod ? '' : 'dark'}" data-buy="rod" data-index="${i}" ${i === state.rod || (!state.rods.includes(i) && state.coins < rod.cost) ? 'disabled' : ''}>${i === state.rod ? '사용 중' : state.rods.includes(i) ? '장착하기' : `✦ ${format(rod.cost)} · 구매`}</button></article>`).join('')}</div>
+    <div class="upgrade-panel"><div><h3>낚싯대 강화 <span class="tag">+${state.upgrade} / 10</span></h3><p>강화당 이동 속도 +3.5%, 안정성 +7%, 도주 대기 -2.5%.<br>강화 효과는 낚싯대를 교체해도 유지돼요.</p></div><button class="button dark" data-action="upgrade" ${state.upgrade >= 10 || state.coins < upgradeCost(state) ? 'disabled' : ''}>${state.upgrade >= 10 ? '최대 강화 달성' : `✦ ${format(upgradeCost(state))} · 강화하기`}</button></div>
     <div class="upgrade-panel"><div><h3>재접근 연구 <span class="tag">+${state.recall} / 10</span></h3><p>희귀 어종이 바늘을 놓은 뒤 돌아오는 대기를 단계당 6.5% 줄여요.<br>참치: 현재 ${returnDelay(SPECIES[4],state).toFixed(2)}초 · 낚시와 조업 코인으로 연구</p></div><button class="button dark" data-action="recall" ${state.recall>=10||state.coins<recallCost(state)?'disabled':''}>${state.recall>=10?'최대 연구 완료':`✦ ${recallCost(state)} · 연구하기`}</button></div>
     <h2 class="subheading">미끼 상점 <span class="mini-label">BAIT INVENTORY</span></h2><p class="muted-note">조업선과 낚시로 번 코인으로 구매하세요. 성공한 포획마다 선택한 미끼 1개만 소모해요. 빈손 회수는 소모하지 않아요.</p><div class="gear-grid">${BAITS.map((bait,i)=>`<article class="gear-card ${i===state.bait?'selected':''}"><div class="gear-art"><canvas class="equipment-preview" data-prop="${['worm','lure','bobber','worm','lure'][i]}" width="300" height="180" aria-label="미끼 도트 그림"></canvas></div><h3>${bait.name} <span class="tag">${state.baitStock[i]}개 보유</span></h3><p>돌진 속도 ${Math.round(bait.attraction*100)}% · 도주 대기 ${Math.round(bait.fear*100)}%</p><button class="button dark" data-buy="bait" data-index="${i}" ${state.coins<bait.cost?'disabled':''}>✦ ${bait.cost} · ${bait.pack}개 구매</button><button class="button" data-equip-bait="${i}" ${i===state.bait||state.baitStock[i]<1?'disabled':''}>${i===state.bait?'선택 중':'이 미끼 선택'}</button></article>`).join('')}</div>`;
   drawEquipment();
@@ -123,7 +123,7 @@ function renderSkills() {
   }).join('')}</div>`).join('');
 }
 function renderCollection() {
-  const behaviors = ['가까운 바늘을 감지하면 돌진 · 기본 포획 1.2초','가까운 바늘을 감지하면 돌진 · 기본 포획 1.8초','가까운 바늘을 감지하면 돌진 · 기본 포획 3초','포획 6초 · 도주 1회 후 재접근','포획 10초 · 도주 2회 후 재접근'];
+  const behaviors = ['랜덤 방향키 3개 · 가까운 바늘로 돌진','랜덤 방향키 5개 · 가까운 바늘로 돌진','랜덤 방향키 7개 · 정확한 순서 입력','랜덤 방향키 10개 · 도주 1회 후 이어서 입력','랜덤 방향키 14개 · 도주 2회 후 이어서 입력'];
   $('collection-content').innerHTML = [...SPECIES].sort((a,b)=>a.sprite-b.sprite).map(s => `<article class="fish-card"><canvas class="fish-preview" data-fish="${s.id}" width="400" height="300" aria-label="${s.name} 도트 그림"></canvas><div class="fish-stars" aria-label="희귀도 ${s.rarity+1}단계">${'★'.repeat(s.rarity+1)}<span>${'★'.repeat(4-s.rarity)}</span></div><span class="rarity" style="color:${rarityColors[s.rarity]}">${s.label.toUpperCase()} · ${['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY'][s.rarity]}</span><h3>${s.name}</h3><small class="scientific-name">${s.scientific || (s.artwork ? '실제 어종 기반 픽셀 아트' : '제공 이미지 기반')}</small><p class="fish-appearance">${s.appearance}</p><p>${s.desc}<br>${behaviors[s.rarity]}</p><span class="tag">${state.catches[s.id] ? '발견 완료' : '아직 만나지 못했어요'}</span><footer><span>✦ ${s.price} / 마리</span><span>${state.catches[s.id] || 0}마리 발견</span></footer><span class="species-reference">${s.artwork || '사용자 제공 도트 스프라이트'}</span></article>`).join('');
   document.querySelectorAll('[data-fish]').forEach(c => {
     fitCanvas(c);const k=c.getContext('2d');k.setTransform(c.width/400,0,0,c.height/300,0,0);
@@ -184,13 +184,14 @@ function cast() {
   $('touch-controls').hidden = !matchMedia('(pointer:coarse)').matches;
   $('pulse-button').hidden = !has(state,'pulse');
   drawScene(simulationTime);
-  toast('물고기 가까이 바늘을 움직이세요. 한 마리를 잡으면 미끼 1개 소모 후 자동 회수해요.'); playTone(330);
+  toast('물고기 가까이 바늘을 움직이세요. 걸리면 랜덤 방향키를 입력하세요. 성공 시 미끼 1개 소모 후 자동 회수해요.'); playTone(330);
 }
 function finish() {
   if (!session) return;
   const finished = session; session = null; pointerTarget = null; keys.clear(); touchDirs.clear();
   $('sea-intro').hidden = false; $('session-hud').hidden = true; $('reel-button').disabled = true;
   $('touch-controls').hidden = true; $('pulse-button').hidden = true;
+  $('catch-challenge').hidden=true;
   $('result-content').innerHTML = Object.entries(finished.catches).map(([id,n]) => `<div class="result-row"><span>${SPECIES.find(s=>s.id===id).name}</span><b>${n}마리</b></div>`).join('') + `<div class="result-total">${finished.count}마리 · ✦ ${format(finished.coins)} 코인</div><p>${finished.count ? '미끼 1개 소모 · 바늘 회수 완료 · 판매 금액 정산 완료' : '방향키 또는 화면을 누르고 끌어 바늘을 조작해 보세요.'}</p>`;
   $('result-dialog').showModal(); save(); refresh();drawScene(simulationTime);
 }
@@ -202,6 +203,11 @@ $('cast-main').addEventListener('click',cast); $('reel-button').addEventListener
 $('result-close').addEventListener('click',()=>$('result-dialog').close()); $('pulse-button').addEventListener('click',pulse);
 window.addEventListener('keydown',e=>{
   if (!session || $('result-dialog').open || e.target.closest('input,textarea,select')) return;
+  if(session.phase==='challenge'){
+    const direction={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key];
+    if(direction){e.preventDefault();if(!e.repeat)enterDirection(direction);}
+    return;
+  }
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D',' '].includes(e.key)) {
     e.preventDefault(); keys.add(e.key.toLowerCase()); pointerTarget = null; if (e.key === ' ' && !e.repeat) pulse();
   }
@@ -209,11 +215,11 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
 window.addEventListener('blur',()=>{keys.clear();touchDirs.clear();pointerTarget=null;});
 function point(e) { const r = canvas.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*1000, y:(e.clientY-r.top)/r.height*600 }; }
-canvas.addEventListener('pointerdown',e=>{if (!session) return; canvas.setPointerCapture(e.pointerId);pointerTarget=point(e);});
-canvas.addEventListener('pointermove',e=>{if(session && canvas.hasPointerCapture(e.pointerId)) pointerTarget=point(e);});
+canvas.addEventListener('pointerdown',e=>{if (session?.phase!=='fishing') return; canvas.setPointerCapture(e.pointerId);pointerTarget=point(e);});
+canvas.addEventListener('pointermove',e=>{if(session?.phase==='fishing' && canvas.hasPointerCapture(e.pointerId)) pointerTarget=point(e);});
 canvas.addEventListener('pointerup',()=>pointerTarget=null); canvas.addEventListener('pointercancel',()=>pointerTarget=null);
 document.querySelectorAll('[data-dir]').forEach(b=>{
-  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);touchDirs.add(b.dataset.dir);pointerTarget=null;});
+  b.addEventListener('pointerdown',e=>{e.preventDefault();if(session?.phase==='challenge'){enterDirection(b.dataset.dir);return;}b.setPointerCapture(e.pointerId);touchDirs.add(b.dataset.dir);pointerTarget=null;});
   for(const type of ['pointerup','pointercancel','lostpointercapture']) b.addEventListener(type,()=>touchDirs.delete(b.dataset.dir));
 });
 document.addEventListener('visibilitychange',()=>{
@@ -224,6 +230,42 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('pagehide',()=>{accrueIdle(state);save();});
 setInterval(()=>{accrueIdle(state);refreshIdle();},1000);
 setInterval(save,10000);
+
+const directionGlyph={up:'↑',down:'↓',left:'←',right:'→'};
+let challengeDisplay='';
+function renderChallenge(){
+  const active=session?.phase==='challenge',panel=$('catch-challenge');panel.hidden=!active;
+  if(!active){challengeDisplay='';return;}
+  const c=session.challenge,signature=JSON.stringify([c.sequence,c.index,c.guards,c.feedback]);
+  if(signature===challengeDisplay)return;challengeDisplay=signature;
+  $('challenge-title').textContent=`${c.fish.species.name} · 방향키 ${c.sequence.length}개`;
+  $('challenge-progress').textContent=`${c.index} / ${c.sequence.length} 성공 · 실수 보호 ${c.guards}회`;
+  $('challenge-sequence').innerHTML=c.sequence.map((dir,i)=>`<span class="${i<c.index?'done':i===c.index?'current':''}" aria-label="${i+1}번째 ${directionGlyph[dir]}${i<c.index?' 완료':i===c.index?' 다음':''}">${directionGlyph[dir]}</span>`).join('');
+  $('challenge-next').textContent=`다음 방향 ${directionGlyph[c.sequence[c.index]]}`;
+  $('challenge-feedback').textContent=c.feedback;
+  $('touch-controls').hidden=true;$('pulse-button').hidden=true;
+}
+function enterDirection(direction){
+  handleFishingEvent(submitDirection(fishPopulation,session,direction,state));renderChallenge();
+}
+document.querySelectorAll('[data-catch-direction]').forEach(button=>button.addEventListener('click',()=>enterDirection(button.dataset.catchDirection)));
+function handleFishingEvent(event){
+  if(event?.type==='bite'){
+    keys.clear();touchDirs.clear();pointerTarget=null;playTone(550);
+  }
+  if(event?.type==='escaped'){
+    keys.clear();touchDirs.clear();pointerTarget=null;
+    $('touch-controls').hidden=!matchMedia('(pointer:coarse)').matches;$('pulse-button').hidden=!has(state,'pulse');
+    toast(event.fish.species.name+'가 바늘을 놓았어요. 재접근하면 남은 방향키를 이어서 입력하세요.');
+  }
+  if(event?.type==='caught'){
+    $('session-count').textContent='1';$('reel-button').disabled=true;
+    $('catch-popup').innerHTML=event.fish.species.name+'<small>+'+event.reward.coins+' 코인 · 미끼 1개 소모 · 자동 회수 중</small>';
+    $('catch-popup').classList.add('show');clearTimeout(popupTimeout);popupTimeout=setTimeout(()=>$('catch-popup').classList.remove('show'),2200);
+    playTone(700);save();refresh();
+  }
+  if(event?.type==='returned'||event?.type==='timeout')finish();
+}
 
 function update(dt,t) {
   if (session) {
@@ -243,17 +285,10 @@ function update(dt,t) {
     if(session.phase==='fishing')moveHook(hook,dx,dy,stats(state).speed,dt);
   }
   const event=stepFishing(fishPopulation,session,hook,state,dt,t);
-  if(event?.type==='escaped')toast(event.fish.species.name+'가 바늘을 놓았어요. 범위 안에서 기다리면 다시 붙어요.');
-  if(event?.type==='caught'){
-    $('session-count').textContent='1';$('reel-button').disabled=true;
-    $('catch-popup').innerHTML=event.fish.species.name+'<small>+'+event.reward.coins+' 코인 · 미끼 1개 소모 · 자동 회수 중</small>';
-    $('catch-popup').classList.add('show');clearTimeout(popupTimeout);popupTimeout=setTimeout(()=>$('catch-popup').classList.remove('show'),2200);
-    playTone(700);save();refresh();
-  }
-  if(event?.type==='returned'||event?.type==='timeout'){finish();return;}
+  handleFishingEvent(event);renderChallenge();
   if(session){
     const target=session.target,alertCount=fishPopulation.filter(f=>f.respawn<=0 && f.mode!=='routine').length;
-    $('target-status').textContent=session.phase==='reeling'?'바늘 자동 회수 중':(alertCount>1?alertCount+'마리 반응 · ':'')+(target?.mode==='fleeing'?target.species.name+' · 재접근 '+target.escapeLeft.toFixed(1)+'초':target?target.species.name+' · '+(target.mode==='attached'?'포획 '+Math.floor(target.progress*100)+'%':'돌진 중'):'물고기에 가까이 다가가세요');
+    $('target-status').textContent=session.phase==='reeling'?'바늘 자동 회수 중':session.phase==='challenge'?target.species.name+' · 방향키 입력 중':(alertCount>1?alertCount+'마리 반응 · ':'')+(target?.mode==='fleeing'?target.species.name+' · 재접근 '+target.escapeLeft.toFixed(1)+'초':target?target.species.name+' · 돌진 중':'물고기에 가까이 다가가세요');
   }
 }
 function drawFish(k,s,x,y,dir,size,alpha=1) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,normalizeSave,SPECIES,BAITS,buyBait,collectIdle,returnDelay,upgradeRecall,patternPosition} from '../game-core.js';
-import {createFishPool,createCast,routineBounds,inRoutine,noticesHook,stepFishing} from '../fishing.js';
+import {createFishPool,createCast,routineBounds,inRoutine,noticesHook,stepFishing,submitDirection} from '../fishing.js';
 import {RETURN_POINT} from '../world.js';
 
 test('idle income buys consumable packs of every bait, with insufficient funds rejected',()=>{
@@ -47,7 +47,8 @@ function simulate(species,configure=()=>{}){
   f.anchor={x:500,y:450};f.x=500;f.y=450;
   const run=createCast(s,0),hook={x:500,y:450},events=[];
   for(let i=1;i<=1200;i++){
-    const e=stepFishing([f],run,hook,s,.05,i*.05,i*50);if(e)events.push({...e,at:i*.05});
+    let e=stepFishing([f],run,hook,s,.05,i*.05,i*50);if(e && e.type!=='bite')events.push({...e,at:i*.05});
+    if(run.phase==='challenge'){e=submitDirection([f],run,run.challenge.sequence[run.challenge.index],s);if(e && ['caught','escaped'].includes(e.type))events.push({...e,at:i*.05});}
     if(run.phase==='done')break;
   }
   return {s,run,hook,f,events};
@@ -72,7 +73,7 @@ test('simultaneous aggro captures only one fish and consumes exactly one bait',(
   let caught=0;
   for(let i=1;i<300;i++){
     const event=stepFishing(pool,run,hook,state,.05,i*.05,i*50);
-    if(event?.type==='caught')caught++;
+    if(run.phase==='challenge' && submitDirection(pool,run,run.challenge.sequence[run.challenge.index],state)?.type==='caught')caught++;
     if(run.phase==='done')break;
   }
   assert.equal(caught,1);assert.equal(state.total,1);assert.equal(state.baitStock[0],19);

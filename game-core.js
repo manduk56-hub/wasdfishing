@@ -241,7 +241,7 @@ export const SKILLS = [
   { id: 'stealth', name: '고요한 바늘', branch: '유인', icon: '◈', desc: '희귀 물고기의 도주 후 재접근 대기 35% 감소.', requires: 'charm' },
   { id: 'pulse', name: '물결의 속삭임', branch: '유인', icon: '◎', desc: '스페이스 / 스킬 버튼: 5초 동안 돌진 속도 증가, 도주 대기 빠르게 회복. 재사용 18초.', requires: 'stealth' },
   { id: 'agile', name: '날렵한 손끝', branch: '조작', icon: '↗', desc: '바늘의 이동 속도 +25%.', requires: null },
-  { id: 'grip', name: '단단한 매듭', branch: '조작', icon: '⌘', desc: '포획 속도 +35%, 포획 거리 +6.', requires: 'agile' },
+  { id: 'grip', name: '단단한 매듭', branch: '조작', icon: '⌘', desc: '포획 안정성 +35%로 방향키 실수 보호 증가, 포획 거리 +6.', requires: 'agile' },
   { id: 'patient', name: '오래 머무는 낚시', branch: '조작', icon: '◷', desc: '한 번의 탐험 시간 +60초.', requires: 'grip' },
   { id: 'value', name: '보물 감별사', branch: '성장', icon: '✧', desc: '직접 잡은 물고기의 판매 금액 +25%.', requires: null },
   { id: 'learn', name: '바다의 지식', branch: '성장', icon: '▤', desc: '직접 낚시 경험치 +35%.', requires: 'value' },
