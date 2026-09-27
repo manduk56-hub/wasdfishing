@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b2c"><meta name="description" content="바늘을 직접 움직이며 바다를 탐험하는 낚시 게임, 타이드라인.">
+  <title>TIDELINE — 나만의 작은 바다</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="pixel-theme.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#fishing" aria-label="타이드라인 홈"><span class="brand-symbol">∿</span><span>TIDELINE<small>나만의 작은 바다</small></span></a>
+    <div class="nav-caption">YOUR ADVENTURE</div>
+    <nav aria-label="게임 메뉴">
+      <button class="nav-item active" data-tab="fishing"><span>⌁</span> 낚시하기 <i>01</i></button>
+      <button class="nav-item" data-tab="gear"><span>♧</span> 장비 공방 <i>02</i></button>
+      <button class="nav-item" data-tab="skills"><span>✧</span> 스킬 트리 <i>03</i></button>
+      <button class="nav-item" data-tab="collection"><span>▤</span> 물고기 도감 <i>04</i></button>
+      <button class="nav-item" data-tab="dock"><span>⚑</span> 자동 조업 <b id="idle-dot"></b><i>05</i></button>
+    </nav>
+    <div class="side-bottom"><div class="side-illustration">☀<span>∿ ∿ ∿</span></div><p>서두르지 않아도 괜찮아요.<br>바다는 언제나 여기 있으니까.</p><div class="save-state"><span></span> <span id="save-label">자동 저장 사용 중</span></div></div>
+  </aside>
+  <main>
+    <header class="topbar"><div class="breadcrumb">나의 항해 <span>/</span> <b id="page-name">고요한 산호 만</b></div><div class="wallet"><span class="coin-icon">✦</span><b id="coins">180</b><span class="wallet-divider"></span><span class="avatar">F</span><span class="player-name">바다 여행자 <small id="level">Lv. 1</small></span></div></header>
+    <div class="page-content">
+      <div class="page-heading"><div><div class="eyebrow" id="page-eyebrow">A LITTLE ESCAPE, A BIG ADVENTURE</div><h1 id="page-title">오늘은 어떤 만남이 기다릴까요?</h1><p id="page-description">낚싯대를 던지고, 나만의 속도로 바다를 탐험해 보세요.</p></div><div class="weather"><span>☀</span><div>맑음 · 잔잔한 물결<small>산호 만 / 초급 해역</small></div></div></div>
+      <section id="view-fishing" class="view active">
+        <div class="fishing-layout"><div class="sea-panel">
+          <div class="sea-toolbar"><div><span class="live-dot"></span> 고요한 산호 만 <span class="area-tag">CORAL BAY</span></div><button id="sound-toggle" class="icon-button" aria-label="효과음 켜기" title="효과음 켜기">♪ <span>OFF</span></button></div>
+          <div class="sea-wrap"><canvas id="sea" aria-label="낚시 바다. 던지기 버튼으로 시작하고 방향키 또는 터치로 바늘을 움직이세요."></canvas>
+            <div class="sea-location"><span>01 /</span> CORAL BAY<small>수면 아래의 작은 우주</small></div>
+            <div class="depth-scale"><span>0 m</span><span>10 m</span><span>20 m</span><span>30 m</span></div>
+            <div id="sea-intro" class="sea-intro"><div class="intro-hook">♧</div><h2>바다에 마음을 던져보세요</h2><p>물고기 가까이 바늘을 움직이세요.<br>한 마리 포획 → 미끼 1개 소모 → 자동 회수</p><button class="button primary" id="cast-main">낚싯대 던지기 <span>↗</span></button><button class="intro-shop" data-go="gear">미끼 상점 ↗</button><small>방향키 / WASD · 모바일 터치</small></div>
+            <div id="session-hud" class="session-hud" hidden><span>남은 시간 <b id="timer">60</b>초</span><span>이번 조업 <b id="session-count">0</b>마리</span><span id="target-status">바늘을 물고기 가까이</span></div>
+            <div id="catch-popup" class="catch-popup" aria-live="polite"></div>
+            <div class="touch-controls" id="touch-controls" hidden><button data-dir="up" aria-label="바늘 위로">↑</button><div><button data-dir="left" aria-label="바늘 왼쪽으로">←</button><button data-dir="down" aria-label="바늘 아래로">↓</button><button data-dir="right" aria-label="바늘 오른쪽으로">→</button></div></div>
+            <button id="pulse-button" class="pulse-button" hidden>◎ 물결의 속삭임 <small>SPACE</small></button>
+          </div>
+          <div class="sea-footer"><div class="control-tip"><span>↑ ↓ ← →</span> 바늘 이동 <span class="tip-divider">/</span> 터치로 이동</div><button id="reel-button" class="button small" disabled>낚시 종료 ↗</button></div>
+        </div>
+        <aside class="fishing-info">
+          <div class="card loadout-card"><div class="card-heading"><h3>오늘의 채비</h3><button data-go="gear" aria-label="장비 공방으로 이동">↗</button></div><div class="equipped-rod"><canvas class="rod-art equipment-preview" data-prop="rod" width="300" height="150" aria-label="장착한 낚싯대 도트 그림"></canvas><span class="mini-label">EQUIPPED ROD</span><h3 id="rod-name">바닷바람 낚싯대</h3><p id="rod-sub">바다와 친해지는 첫걸음</p><span id="rod-tag" class="tag">강화 +0</span></div><div class="loadout-row"><span>미끼</span><b id="bait-name">작은 새우</b></div><div class="loadout-row"><span>조작 속도</span><b id="speed-stat">125</b></div><div class="skill-loadout"><div class="mini-label">선택한 스킬 <span id="skill-count">0 / 3</span></div><div id="equipped-skills" class="skill-slots"></div></div></div>
+          <div class="card idle-card"><div class="card-heading"><h3>바다는 쉬지 않아요</h3><span class="live-dot"></span></div><p>자리를 비운 동안에도<br>조업선이 작은 보물을 모아와요.</p><div class="idle-amount"><span>✦</span><b id="idle-preview">0</b><small>수령 가능</small></div><button class="button dark" data-action="collect">조업 보상 받기 <span>↓</span></button><small class="idle-rate" id="idle-rate">분당 2 코인 · 최대 8시간</small></div>
+          <div class="ocean-note"><span>✳</span><p><b>바다의 작은 힌트</b><br>물고기는 자기 영역을 돌며 가까운 바늘만 감지해요.<br>영웅·전설 어종은 도주 후 다시 붙어요.</p></div>
+        </aside></div>
+        <div class="bottom-stats"><div><span class="stat-icon">⌁</span><div><small>총 낚은 물고기</small><b><span id="total-catches">0</span> <em>마리</em></b></div></div><div><span class="stat-icon">▤</span><div><small>발견한 어종</small><b><span id="discovered">0</span> <em id="species-total">/ 20종</em></b></div></div><div><span class="stat-icon">✧</span><div><small>다음 레벨까지</small><b id="xp-label">0 / 100 XP</b><div class="xp-track"><span id="xp-fill"></span></div></div></div><div><span class="stat-icon">◈</span><div><small>가장 희귀한 발견</small><b id="best-catch">아직 탐험 중</b></div></div></div>
+      </section>
+      <section id="view-gear" class="view"><div class="section-banner"><span>⌁</span><div><h2>좋은 채비가 만드는 새로운 만남</h2><p>낚싯대는 조작과 포획을, 미끼는 유인과 회피를 개선해요.</p></div></div><div id="gear-content"></div></section>
+      <section id="view-skills" class="view"><div class="section-banner"><span>✧</span><div><h2>나만의 낚시 스타일을 만들어 보세요</h2><p>레벨마다 스킬 포인트 1개. 스킬을 해금하고 최대 3개를 자유롭게 조합하세요.</p></div><b id="skill-points" class="points-pill">2 SP</b></div><div id="skills-content" class="skill-tree"></div><div class="muted-note">선행 스킬은 해금만 되어 있으면 돼요. 장착하지 않아도 다음 스킬을 사용할 수 있어요.</div></section>
+      <section id="view-collection" class="view"><div class="section-banner"><span>▤</span><div><h2>모든 물고기에게는 자신만의 리듬이 있어요</h2><p>같은 어종은 항상 같은 기본 패턴으로 움직여요. 그 리듬을 따라가 보세요.</p></div></div><div id="collection-content" class="collection-grid"></div></section>
+      <section id="view-dock" class="view"><div id="dock-content"></div></section>
+      <footer class="page-footer"><span>TIDELINE <i>·</i> 당신의 하루에 작은 물결을.</span><span>로컬 저장 <i>·</i> 보스 해역은 준비 중</span></footer>
+    </div>
+  </main>
+  <div id="toast" role="status" class="toast"></div>
+  <dialog id="result-dialog"><div class="result-icon">⌁</div><div class="eyebrow">A GOOD DAY AT SEA</div><h2>오늘의 작은 수확</h2><p>바다가 건네준 선물이에요.</p><div id="result-content"></div><button id="result-close" class="button primary">다시 바다로 ↗</button></dialog>
+  <script type="module" src="app.js"></script>
+</body></html>
