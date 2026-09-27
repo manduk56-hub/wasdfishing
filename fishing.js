@@ -1,9 +1,10 @@
 import { SPECIES, stats, patternPosition, returnDelay, awardCatch } from './game-core.js';
+import { WORLD, RETURN_POINT } from './world.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function routineBounds(fish) {
   const sizes={shoal:[135,17],orbit:[85,44],zigzag:[120,36],wave:[155,46],patrol:[165,10]};
   const [x,y]=sizes[fish.species.pattern];
-  return {left:clamp(fish.anchor.x-x-18,30,955),right:clamp(fish.anchor.x+x+18,30,955),top:clamp(fish.anchor.y-y-18,100,565),bottom:clamp(fish.anchor.y+y+18,100,565)};
+  return {left:clamp(fish.anchor.x-x-18,WORLD.margin,WORLD.width-WORLD.margin),right:clamp(fish.anchor.x+x+18,WORLD.margin,WORLD.width-WORLD.margin),top:clamp(fish.anchor.y-y-18,WORLD.surface,WORLD.height-WORLD.margin),bottom:clamp(fish.anchor.y+y+18,WORLD.surface,WORLD.height-WORLD.margin)};
 }
 export function inRoutine(fish,hook) {
   const b=routineBounds(fish);return hook.x>=b.left&&hook.x<=b.right&&hook.y>=b.top&&hook.y<=b.bottom;
@@ -16,8 +17,9 @@ export function noticesHook(fish,hook,state){
   return Math.hypot(fish.x-hook.x,fish.y-hook.y)<=stats(state).radius;
 }
 export function createFishPool() {
-  return SPECIES.flatMap((species,si)=>Array.from({length:[3,2,2,1,1][species.rarity]},(_,i)=>{
-    const anchor={x:150+((i*193+si*127)%700),y:species.depth[0]+(species.depth[1]-species.depth[0])*(.25+(i%3)*.22)};
+  let slot=0;
+  return [...SPECIES].sort((a,b)=>a.rarity-b.rarity).flatMap((species,si)=>Array.from({length:[3,2,2,1,1][species.rarity]},(_,i)=>{
+    const index=slot++,anchor={x:240+(index%12)*390,y:340+Math.floor(index/12)*900+species.rarity*110};
     const phase=i*2.1+si*.83,p=patternPosition(species,0,anchor,phase);
     const fish={species,anchor,phase,...p,previousX:p.x,dir:1,progress:0,respawn:0,escapeLeft:0,escapes:0,mode:'routine'};
     Object.assign(fish,withinTerritory(fish,p));fish.previousX=fish.x;return fish;
@@ -30,8 +32,8 @@ export function createCast(state,now=Date.now()) {
 function move(f,target,speed,dt){const dx=target.x-f.x,dy=target.y-f.y,d=Math.hypot(dx,dy),step=Math.min(d,speed*dt);if(d){f.x+=dx/d*step;f.y+=dy/d*step;}}
 export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
   if(run?.phase==='reeling') {
-    move(hook,{x:568,y:90},470,dt);
-    if(Math.hypot(hook.x-568,hook.y-90)<2){run.phase='done';return {type:'returned'};}
+    move(hook,RETURN_POINT,900,dt);
+    if(Math.hypot(hook.x-RETURN_POINT.x,hook.y-RETURN_POINT.y)<2){run.phase='done';return {type:'returned'};}
     return null;
   }
   if(run?.phase==='done')return null;

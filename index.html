@@ -26,10 +26,11 @@
         <div class="fishing-layout"><div class="sea-panel">
           <div class="sea-toolbar"><div><span class="live-dot"></span> 고요한 산호 만 <span class="area-tag">CORAL BAY</span></div><button id="sound-toggle" class="icon-button" aria-label="효과음 켜기" title="효과음 켜기">♪ <span>OFF</span></button></div>
           <div class="sea-wrap"><canvas id="sea" aria-label="낚시 바다. 던지기 버튼으로 시작하고 방향키 또는 터치로 바늘을 움직이세요."></canvas>
-            <div class="sea-location"><span>01 /</span> CORAL BAY<small>수면 아래의 작은 우주</small></div>
+            <div class="sea-location"><span id="world-region">노을 호수</span><small id="world-depth">여섯 지역으로 떠나는 탐험</small></div>
+            <div id="world-map-panel" class="world-map-panel" hidden><canvas id="world-map" width="150" height="100" aria-label="바다 탐험 지도"></canvas><small id="world-coordinate"></small></div>
             <div class="depth-scale"><span>0 m</span><span>10 m</span><span>20 m</span><span>30 m</span></div>
             <div id="sea-intro" class="sea-intro"><div class="intro-hook">♧</div><h2>바다에 마음을 던져보세요</h2><p>물고기 가까이 바늘을 움직이세요.<br>한 마리 포획 → 미끼 1개 소모 → 자동 회수</p><button class="button primary" id="cast-main">낚싯대 던지기 <span>↗</span></button><button class="intro-shop" data-go="gear">미끼 상점 ↗</button><small>방향키 / WASD · 모바일 터치</small></div>
-            <div id="session-hud" class="session-hud" hidden><span>남은 시간 <b id="timer">60</b>초</span><span>이번 조업 <b id="session-count">0</b>마리</span><span id="target-status">바늘을 물고기 가까이</span></div>
+            <div id="session-hud" class="session-hud" hidden><span>남은 시간 <b id="timer">180</b>초</span><span>이번 조업 <b id="session-count">0</b>마리</span><span id="target-status">바늘을 물고기 가까이</span></div>
             <div id="catch-popup" class="catch-popup" aria-live="polite"></div>
             <div class="touch-controls" id="touch-controls" hidden><button data-dir="up" aria-label="바늘 위로">↑</button><div><button data-dir="left" aria-label="바늘 왼쪽으로">←</button><button data-dir="down" aria-label="바늘 아래로">↓</button><button data-dir="right" aria-label="바늘 오른쪽으로">→</button></div></div>
             <button id="pulse-button" class="pulse-button" hidden>◎ 물결의 속삭임 <small>SPACE</small></button>

@@ -37,3 +37,8 @@ export function drawProp(ctx,name,x,y,width,height){
   ctx.drawImage(props,frame.x,frame.y,frame.w,frame.h,Math.round(x-w/2),Math.round(y-h/2),w,h);
   ctx.restore();return true;
 }
+export function drawWorldSurface(ctx,camera){
+  if(!scenery || camera.y>130)return;
+  const shore=Math.round(scenery.height*.31);
+  ctx.drawImage(scenery,0,0,scenery.width,shore,0,-180-camera.y,1000,280);
+}

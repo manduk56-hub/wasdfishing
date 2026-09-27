@@ -1,4 +1,6 @@
 import { createFishPool, createCast, stepFishing } from './fishing.js';
+import { CAST_ORIGIN, RETURN_POINT, cameraForHook, screenToWorld, moveHook, onScreen, regionAt } from './world.js';
+import { drawWorld, drawMinimap } from './world-renderer.js';
 import { loadFishAtlas } from './fish-atlas.js';
 import { loadVisualAssets, drawProp } from './visual-assets.js';
 import { drawPixelFish, drawPixelLandscape, drawPixelBoat, pixelLine, pixelRing } from './pixel-art.js';
@@ -11,7 +13,7 @@ accrueIdle(state);
 let tab = 'fishing', toastTimeout, popupTimeout, session = null, sound = false, audioContext;
 const keys = new Set(), touchDirs = new Set();
 let pointerTarget = null;
-const hook = { x: 500, y: 125 };
+const hook = { ...CAST_ORIGIN };
 const canvas = $('sea'), ctx = canvas.getContext('2d');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const format = n => Math.floor(n).toLocaleString('ko-KR');
@@ -174,7 +176,7 @@ function cast() {
   const nextCast=createCast(state);
   if(!nextCast){toast('미끼를 공방에서 구매해 주세요.');return;}
   keys.clear(); touchDirs.clear(); pointerTarget = null;
-  hook.x = 500; hook.y = 125;
+  Object.assign(hook,CAST_ORIGIN);
   fishPopulation.forEach(f => { f.progress=0;f.escapeLeft=0;f.escapes=0;f.mode='routine'; });
   session = nextCast;
   $('sea-intro').hidden = true; $('session-hud').hidden = false; $('reel-button').disabled = false;
@@ -232,13 +234,13 @@ function update(dt,t) {
     $('pulse-button').disabled = session.cooldown > 0;
     $('pulse-button').innerHTML = session.cooldown > 0 ? `◎ ${session.pulse > 0 ? '유인 중' : '재사용 대기'} <small>${Math.ceil(session.cooldown)}초</small>` : '◎ 물결의 속삭임 <small>SPACE</small>';
     let dx=0,dy=0;
-    if (pointerTarget) { dx=pointerTarget.x-hook.x;dy=pointerTarget.y-hook.y; }
+    if (pointerTarget) { const target=screenToWorld(pointerTarget,cameraForHook(hook));dx=target.x-hook.x;dy=target.y-hook.y; }
     else {
       dx=(keys.has('arrowright')||keys.has('d')||touchDirs.has('right')?1:0)-(keys.has('arrowleft')||keys.has('a')||touchDirs.has('left')?1:0);
       dy=(keys.has('arrowdown')||keys.has('s')||touchDirs.has('down')?1:0)-(keys.has('arrowup')||keys.has('w')||touchDirs.has('up')?1:0);
+      dx*=1000;dy*=1000;
     }
-    const magnitude=Math.hypot(dx,dy), step=Math.min(stats(state).speed*dt,pointerTarget?magnitude:Infinity);
-    if(magnitude>0 && session.phase==='fishing'){hook.x=clamp(hook.x+dx/magnitude*step,30,965);hook.y=clamp(hook.y+dy/magnitude*step,100,570);}
+    if(session.phase==='fishing')moveHook(hook,dx,dy,stats(state).speed,dt);
   }
   const event=stepFishing(fishPopulation,session,hook,state,dt,t);
   if(event?.type==='escaped')toast(event.fish.species.name+'가 바늘을 놓았어요. 범위 안에서 기다리면 다시 붙어요.');
@@ -272,21 +274,37 @@ window.addEventListener('resize',()=>{
 });
 function drawScene(t) {
   ctx.setTransform(canvas.width/1000,0,0,canvas.height/600,0,0);
-  drawPixelLandscape(ctx,t,Boolean(session));
-  drawPixelBoat(ctx,t,500,session?82:260);
-  for(const f of fishPopulation)if(session && f.respawn<=0){
+  $('world-map-panel').hidden=!session;
+  if(!session){
+    drawPixelLandscape(ctx,t,false);drawPixelBoat(ctx,t,500,260);
+    $('world-region').textContent='노을 호수';$('world-depth').textContent='여섯 지역으로 떠나는 탐험';
+    document.querySelector('.depth-scale').hidden=true;
+    return;
+  }
+  const camera=cameraForHook(hook),depth=Math.max(0,Math.round((hook.y-100)/20));
+  $('world-region').textContent=regionAt(hook).name;$('world-depth').textContent=`수심 ${depth} m`;
+  $('world-coordinate').textContent=`동서 ${Math.round(hook.x/20)} m · 수심 ${depth} m`;
+  document.querySelector('.depth-scale').hidden=false;
+  document.querySelectorAll('.depth-scale span').forEach((label,i)=>label.textContent=`${Math.max(0,Math.round((camera.y+i*200-100)/20))} m`);
+  const map=$('world-map');fitCanvas(map);drawMinimap(map.getContext('2d'),hook,camera);
+  map.setAttribute('aria-label',`${regionAt(hook).name}, 동서 ${Math.round(hook.x/20)}미터, 수심 ${depth}미터`);
+  drawWorld(ctx,camera,t);
+  ctx.save();ctx.translate(-camera.x,-camera.y);
+  if(camera.y<150)drawPixelBoat(ctx,t,RETURN_POINT.x-68,82);
+  for(const f of fishPopulation)if(f.respawn<=0 && onScreen(f,camera)){
     drawPixelFish(ctx,f.species,f.x,f.y,f.dir,f.species.size,1,t);
     if(session && f.progress>0)pixelRing(ctx,f.x,f.y,f.species.size+14,'#f4df95',f.progress);
   }
   if(session){
     if(session.phase==='reeling' && session.target)drawPixelFish(ctx,session.target.species,hook.x+18,hook.y+16,1,session.target.species.size,1,t);
     const x=Math.round(hook.x/2)*2,y=Math.round(hook.y/2)*2;
-    pixelLine(ctx,568,66,x,y-12,'#cee2bc');
+    pixelLine(ctx,RETURN_POINT.x,66,x,y-12,'#cee2bc');
     if(session.pulse>0)pixelRing(ctx,x,y,stats(state).radius*(.85+Math.sin(t*5)*.1),'#badd96');
     pixelRing(ctx,x,y,stats(state).catchRadius,'#cfddaa50');
     const hookPixels=['Y....','w....','w....','w...w','w...w','.www.'];
     hookPixels.forEach((row,i)=>[...row].forEach((p,j)=>{if(p!=='.'){ctx.fillStyle=p==='Y'?'#efc76a':'#fff1c1';ctx.fillRect(x+j*2,y-8+i*2,2,2);}}));
   }
+  ctx.restore();
 }
 let previous=performance.now(),simulationTime=0;
 function frame(now) {

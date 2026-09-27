@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,normalizeSave,SPECIES,BAITS,buyBait,collectIdle,returnDelay,upgradeRecall,patternPosition} from '../game-core.js';
 import {createFishPool,createCast,routineBounds,inRoutine,noticesHook,stepFishing} from '../fishing.js';
+import {RETURN_POINT} from '../world.js';
 
 test('idle income buys consumable packs of every bait, with insufficient funds rejected',()=>{
   const s=initialState(0);s.coins=0;assert.equal(buyBait(s,4),false);
@@ -12,7 +13,7 @@ test('idle income buys consumable packs of every bait, with insufficient funds r
 test('empty bait prevents casting; cancelling or timing out consumes no bait',()=>{
   const s=initialState(0);s.baitStock[0]=0;assert.equal(createCast(s,0),null);
   s.baitStock[0]=1;const run=createCast(s,0);
-  assert.equal(stepFishing(createFishPool(),run,{x:950,y:100},s,.1,0,61000).type,'timeout');
+  assert.equal(stepFishing(createFishPool(),run,{x:950,y:100},s,.1,0,run.duration*1000+1).type,'timeout');
   assert.equal(s.baitStock[0],1);assert.equal(s.total,0);
 });
 test('fish patrol their own invisible territories throughout long simulations',()=>{
@@ -81,7 +82,7 @@ test('simultaneous aggro captures only one fish and consumes exactly one bait',(
 test('successful capture consumes exactly one bait, rewards one fish and returns hook automatically',()=>{
   const {s,run,hook,f,events}=simulate(SPECIES[0]);
   assert.equal(s.baitStock[0],19);assert.equal(s.total,1);assert.equal(run.count,1);assert.equal(run.phase,'done');
-  assert.deepEqual(events.map(e=>e.type),['caught','returned']);assert.ok(Math.hypot(hook.x-568,hook.y-90)<2);
+  assert.deepEqual(events.map(e=>e.type),['caught','returned']);assert.ok(Math.hypot(hook.x-RETURN_POINT.x,hook.y-RETURN_POINT.y)<2);
   const coins=s.coins;for(let i=0;i<100;i++)stepFishing([f],run,hook,s,.05,100,1000);
   assert.equal(s.total,1);assert.equal(s.coins,coins);assert.equal(s.baitStock[0],19);
 });
