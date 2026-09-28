@@ -27,7 +27,7 @@ export function submitDirection(pool,run,direction,state){
   }
   const thresholds=fish.species.rarity===4?[.3,.65]:fish.species.rarity===3?[.45]:[];
   if(fish.escapes<thresholds.length&&fish.progress>=thresholds[fish.escapes]){
-    fish.escapes++;fish.escapeLeft=returnDelay(fish.species,state);fish.mode='fleeing';run.phase='fishing';
+    fish.escapes++;fish.escapeLeft=returnDelay(fish.species,state);fish.biteWait=0;fish.mode='fleeing';run.phase='fishing';
     return {type:'escaped',fish};
   }
   return {type:'input',fish};
@@ -52,7 +52,7 @@ export function createFishPool() {
   return [...SPECIES].sort((a,b)=>a.rarity-b.rarity).flatMap((species,si)=>Array.from({length:[3,2,2,1,1][species.rarity]},(_,i)=>{
     const index=slot++,anchor={x:240+(index%12)*390,y:340+Math.floor(index/12)*900+species.rarity*110};
     const phase=i*2.1+si*.83,p=patternPosition(species,0,anchor,phase);
-    const fish={species,anchor,phase,...p,previousX:p.x,dir:1,progress:0,respawn:0,escapeLeft:0,escapes:0,mode:'routine'};
+    const fish={species,anchor,phase,...p,previousX:p.x,dir:1,progress:0,respawn:0,escapeLeft:0,escapes:0,biteWait:0,mode:'routine'};
     Object.assign(fish,withinTerritory(fish,p));fish.previousX=fish.x;return fish;
   }));
 }
@@ -60,6 +60,7 @@ export function createCast(state,now=Date.now()) {
   if(!(state.baitStock[state.bait]>0))return null;
   return {started:now,duration:stats(state).duration,bait:state.bait,phase:'fishing',target:null,count:0,coins:0,catches:{},cooldown:0,pulse:0,landed:false};
 }
+export function biteDelay(species){return 1.2+species.rarity*.35;}
 function move(f,target,speed,dt){const dx=target.x-f.x,dy=target.y-f.y,d=Math.hypot(dx,dy),step=Math.min(d,speed*dt);if(d){f.x+=dx/d*step;f.y+=dy/d*step;}}
 export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
   if(run?.phase==='reeling') {
@@ -72,7 +73,7 @@ export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
   const config=stats(state);
   const pending=fish=>run?.challenge?.fish===fish && Math.hypot(hook.x-run.challenge.origin.x,hook.y-run.challenge.origin.y)<=config.radius*2;
   const alert=fish=>run && (pending(fish) || noticesHook(fish,hook,state) || (fish.mode!=='routine' && Math.hypot(fish.x-hook.x,fish.y-hook.y)<=config.radius*2));
-  if(run?.target && !alert(run.target)){run.target=null;run.challenge=null;run.phase='fishing';}
+  if(run?.target && !alert(run.target)){run.target.biteWait=0;run.target=null;run.challenge=null;run.phase='fishing';}
   if(run && !run.target){
     run.target=pool.filter(f=>f.respawn<=0&&alert(f)).sort((a,b)=>Math.hypot(a.x-hook.x,a.y-hook.y)-Math.hypot(b.x-hook.x,b.y-hook.y))[0]||null;
   }
@@ -85,7 +86,7 @@ export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
       // Awareness follows the fish, rather than testing entry into a rectangle.
       // A wider release distance avoids flickering at the detection boundary.
       if(!pending(f) && Math.hypot(f.x-hook.x,f.y-hook.y)>config.radius*2){
-        f.mode='routine';f.progress=0;f.escapeLeft=0;f.escapes=0;run.target=null;
+        f.mode='routine';f.progress=0;f.escapeLeft=0;f.escapes=0;f.biteWait=0;run.target=null;
         move(f,base,f.species.speed*2,dt);
       }else if(f.escapeLeft>0){
         f.mode='fleeing'; f.escapeLeft=Math.max(0,f.escapeLeft-dt*(run.pulse>0?2:1));
@@ -94,12 +95,15 @@ export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
       }else{
         f.mode='chasing';move(f,withinTerritory(f,hook),(90-f.species.rarity*9)*config.attraction*(run.pulse>0?1.8:1),dt);
         if(run.phase==='fishing' && run.target===f && Math.hypot(f.x-hook.x,f.y-hook.y)<=config.catchRadius+f.species.size*.35){
-          f.mode='attached';run.phase='challenge';
-          if(run.challenge?.fish!==f)run.challenge=makeChallenge(f,state,hook);
-          event={type:'bite',fish:f};
-        }
+          f.biteWait+=dt;
+          if(f.biteWait>=biteDelay(f.species)){
+            f.biteWait=0;f.mode='attached';run.phase='challenge';
+            if(run.challenge?.fish!==f)run.challenge=makeChallenge(f,state,hook);
+            event={type:'bite',fish:f};
+          }
+        }else f.biteWait=0;
       }
-    }else{f.mode='routine';f.progress=0;f.escapeLeft=0;f.escapes=0;move(f,base,f.species.speed*2,dt);}
+    }else{f.mode='routine';f.progress=0;f.escapeLeft=0;f.escapes=0;f.biteWait=0;move(f,base,f.species.speed*2,dt);}
     if(Math.abs(f.x-f.previousX)>.03)f.dir=f.x>f.previousX?1:-1;f.previousX=f.x;
   }
   return event;

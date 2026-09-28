@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,SPECIES} from '../game-core.js';
-import {DIRECTIONS,catchDifficulty,createFishPool,createCast,stepFishing,submitDirection} from '../fishing.js';
+import {DIRECTIONS,catchDifficulty,biteDelay,createFishPool,createCast,stepFishing,submitDirection} from '../fishing.js';
 function bite(species=SPECIES[0],configure=()=>{}){
   const state=initialState(0);configure(state);
   const fish=createFishPool().find(f=>f.species===species),hook={x:fish.x,y:fish.y},pool=[fish],run=createCast(state,0);
-  assert.equal(stepFishing(pool,run,hook,state,.05,0,50).type,'bite');
+  for(let i=1;i<100&&run.phase==='fishing';i++)stepFishing(pool,run,hook,state,.05,i*.05,i*50);
+  assert.equal(run.phase,'challenge');
   return {state,fish,hook,pool,run};
 }
 test('every species gets its difficulty count of random valid directions, and waiting never catches it',()=>{
@@ -19,6 +20,13 @@ test('every species gets its difficulty count of random valid directions, and wa
     assert.equal(run.phase,'challenge');assert.equal(fish.progress,0);assert.equal(state.total,0);assert.equal(state.baitStock[0],20);
   }
   assert.ok(sequences.size>5);
+});
+test('a fish waits at the hook before biting',()=>{
+  const state=initialState(0),fish=createFishPool()[0],hook={x:fish.x,y:fish.y},run=createCast(state,0);
+  for(let i=1;i<=10;i++)stepFishing([fish],run,hook,state,.05,i*.05,i*50);
+  assert.equal(run.phase,'fishing');assert.equal(state.total,0);assert.ok(fish.biteWait<biteDelay(fish.species));
+  for(let i=11;i<100&&run.phase==='fishing';i++)stepFishing([fish],run,hook,state,.05,i*.05,i*50);
+  assert.equal(run.phase,'challenge');
 });
 test('only the full correct sequence catches a fish, with exactly one reward and one bait consumed',()=>{
   const {state,pool,run}=bite();const sequence=[...run.challenge.sequence];
