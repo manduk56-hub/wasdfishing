@@ -33,9 +33,8 @@ h1,h2,h3,.wallet>b,.brand{font-weight:800;text-shadow:2px 2px #05121b}
 /* Preserve the world aspect ratio at every viewport; render at physical pixels. */
 .catch-challenge{position:absolute;z-index:5;left:50%;bottom:12px;transform:translateX(-50%);width:min(460px,94%);padding:12px;background:#092b35f5;border:3px solid #cba15d;box-shadow:inset 0 0 0 2px #3f5d5a,0 4px #05151c;text-align:center;color:#ffe8b0}
 .catch-challenge>small{display:block;margin:4px 0;font-size:10px;color:#bcd6c9}
-.challenge-sequence{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin:8px 0}.challenge-sequence span{display:grid;place-items:center;width:26px;height:28px;background:#173d47;border:2px solid #547477;font-size:20px;color:#a6c4c4}.challenge-sequence .done{background:#235c3d;color:#74d990;border-color:#58ad70}.challenge-sequence .current{background:#a77430;color:#fff4c4;border-color:#ffe091;box-shadow:0 0 0 2px #bb8444}
-.challenge-next{font-size:13px}.catch-challenge p{font-size:10px;margin:5px 0 8px;color:#d4ddc1}.challenge-buttons{display:flex;justify-content:center;gap:8px}.challenge-buttons button{width:44px;height:38px;font-size:24px;color:#ffe9ad;background:#684422;border:2px solid #cba15d;touch-action:manipulation}.challenge-buttons button:hover,.challenge-buttons button:focus-visible{background:#a27636;outline:2px solid #ffe4a0}
-@media(max-width:700px){.catch-challenge{bottom:4px;padding:5px;width:96%}.catch-challenge>b:first-child{font-size:11px}.catch-challenge>small{font-size:8px;margin:2px}.challenge-sequence{gap:3px;margin:5px 0}.challenge-sequence span{width:20px;height:22px;font-size:16px}.challenge-next{font-size:10px}.catch-challenge p{font-size:8px;margin:3px}.challenge-buttons button{width:38px;height:29px;font-size:20px}}
+.catch-challenge p{font-size:10px;margin:5px 0 8px;color:#d4ddc1}
+@media(max-width:700px){.catch-challenge>b:first-child{font-size:11px}.catch-challenge>small{font-size:8px;margin:2px}.catch-challenge p{font-size:8px;margin:3px}}
 .world-map-panel{position:absolute;right:18px;bottom:90px;width:120px;padding:5px;background:#072730ec;border:2px solid #b69557;pointer-events:none}
 #world-map{display:block;width:100%;aspect-ratio:3/2;image-rendering:pixelated}
 .world-map-panel small{display:block;color:#ffe2a1;font-size:8px;text-align:center;margin-top:5px}
@@ -55,3 +54,9 @@ h1,h2,h3,.wallet>b,.brand{font-weight:800;text-shadow:2px 2px #05121b}
  .session-hud>span{padding:4px 5px}.session-hud>span:last-child{flex-basis:auto}
  .touch-controls{bottom:8px;left:8px}.touch-controls button{width:29px;height:29px;font-size:15px}
 }
+
+.sea-panel:has(.catch-challenge:not([hidden])) .control-tip{visibility:hidden}
+.catch-challenge{width:min(330px,90%);bottom:24px;padding:18px;background:#092b35f8;box-shadow:inset 0 0 0 2px #3f5d5a,0 8px 28px #031821aa}
+.challenge-key{display:grid;place-items:center;width:78px;height:72px;margin:12px auto 8px;border:3px solid #ffe091;background:#a77430;color:#fff8d7;font-size:48px;line-height:1;box-shadow:0 0 0 3px #704922,0 6px #05151c;touch-action:manipulation}
+.challenge-key:hover,.challenge-key:focus-visible{background:#bd8d42;outline:2px solid #fff1bb;outline-offset:5px}
+@media(max-width:700px){.catch-challenge{bottom:7px;padding:9px}.challenge-key{width:55px;height:50px;font-size:32px;margin:6px auto}}

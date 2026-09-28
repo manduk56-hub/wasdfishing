@@ -240,15 +240,16 @@ function renderChallenge(){
   if(signature===challengeDisplay)return;challengeDisplay=signature;
   $('challenge-title').textContent=`${c.fish.species.name} · 방향키 ${c.sequence.length}개`;
   $('challenge-progress').textContent=`${c.index} / ${c.sequence.length} 성공 · 실수 보호 ${c.guards}회`;
-  $('challenge-sequence').innerHTML=c.sequence.map((dir,i)=>`<span class="${i<c.index?'done':i===c.index?'current':''}" aria-label="${i+1}번째 ${directionGlyph[dir]}${i<c.index?' 완료':i===c.index?' 다음':''}">${directionGlyph[dir]}</span>`).join('');
-  $('challenge-next').textContent=`다음 방향 ${directionGlyph[c.sequence[c.index]]}`;
+  const required=c.sequence[c.index],key=$('challenge-key');
+  key.textContent=directionGlyph[required];key.dataset.direction=required;
+  key.setAttribute('aria-label',`눌러야 할 방향 ${directionGlyph[required]}`);
   $('challenge-feedback').textContent=c.feedback;
   $('touch-controls').hidden=true;$('pulse-button').hidden=true;
 }
 function enterDirection(direction){
   handleFishingEvent(submitDirection(fishPopulation,session,direction,state));renderChallenge();
 }
-document.querySelectorAll('[data-catch-direction]').forEach(button=>button.addEventListener('click',()=>enterDirection(button.dataset.catchDirection)));
+$('challenge-key').addEventListener('click',()=>enterDirection($('challenge-key').dataset.direction));
 function handleFishingEvent(event){
   if(event?.type==='bite'){
     keys.clear();touchDirs.clear();pointerTarget=null;playTone(550);
