@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WORLD, CAST_ORIGIN, RETURN_POINT, moveHook, cameraForHook, screenToWorld, onScreen, regionAt } from '../world.js';
+import { WORLD, CAST_ORIGIN, moveHook, cameraForHook, screenToWorld, onScreen, regionAt } from '../world.js';
 import { createFishPool, createCast, stepFishing, submitDirection } from '../fishing.js';
 import { initialState, stats } from '../game-core.js';
 
@@ -40,17 +40,17 @@ test('all species are distributed across six regions, with a small fraction visi
   assert.ok(largest<pool.length/3);
 });
 
-test('a deep-world fish can be captured and reeled back to the original boat',()=>{
+test('a deep-world fish can be captured without ending the cast',()=>{
   const state=initialState(0),fish=createFishPool().find(f=>f.anchor.x>4000&&f.anchor.y>2000);
   const hook={x:fish.x,y:fish.y},run=createCast(state,0),events=[];
   for(let i=1;i<2000;i++){
     const event=stepFishing([fish],run,hook,state,.05,i*.05,i*50);
     if(event)events.push(event.type);
     if(run.phase==='challenge'){const input=submitDirection([fish],run,run.challenge.sequence[run.challenge.index],state);if(input)events.push(input.type);}
-    if(run.phase==='done')break;
+    if(events.includes('caught')||run.phase==='done')break;
   }
   assert.equal(state.catches[fish.species.id],1);
   assert.equal(state.baitStock[0],19);
-  assert.ok(events.includes('caught'));assert.equal(events.at(-1),'returned');
-  assert.ok(Math.hypot(hook.x-RETURN_POINT.x,hook.y-RETURN_POINT.y)<2);
+  assert.ok(events.includes('caught'));assert.equal(run.phase,'fishing');
+  assert.equal(run.count,1);
 });

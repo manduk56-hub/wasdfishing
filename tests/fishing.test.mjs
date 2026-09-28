@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,normalizeSave,SPECIES,BAITS,buyBait,collectIdle,returnDelay,upgradeRecall,patternPosition} from '../game-core.js';
 import {createFishPool,createCast,routineBounds,inRoutine,noticesHook,stepFishing,submitDirection} from '../fishing.js';
-import {RETURN_POINT} from '../world.js';
 
 test('idle income buys consumable packs of every bait, with insufficient funds rejected',()=>{
   const s=initialState(0);s.coins=0;assert.equal(buyBait(s,4),false);
@@ -49,7 +48,7 @@ function simulate(species,configure=()=>{}){
   for(let i=1;i<=1200;i++){
     let e=stepFishing([f],run,hook,s,.05,i*.05,i*50);if(e && e.type!=='bite')events.push({...e,at:i*.05});
     if(run.phase==='challenge'){e=submitDirection([f],run,run.challenge.sequence[run.challenge.index],s);if(e && ['caught','escaped'].includes(e.type))events.push({...e,at:i*.05});}
-    if(run.phase==='done')break;
+    if(events.some(e=>e.type==='caught')||run.phase==='done')break;
   }
   return {s,run,hook,f,events};
 }
@@ -67,23 +66,23 @@ test('all nearby fish in overlapping territories chase together while distant fi
   stepFishing(pool,run,{x:30,y:100},state,.1,1,200);
   assert.equal(run.target,null);assert.ok(pool.every(f=>f.mode==='routine'));
 });
-test('simultaneous aggro captures only one fish and consumes exactly one bait',()=>{
+test('one cast can catch multiple nearby fish while consuming one bait',()=>{
   const state=initialState(0),pool=createFishPool().slice(0,2),hook={x:500,y:300},run=createCast(state,0);
   pool.forEach(f=>{f.anchor={...hook};f.x=500;f.y=300;});
   let caught=0;
-  for(let i=1;i<300;i++){
+  for(let i=1;i<600;i++){
     const event=stepFishing(pool,run,hook,state,.05,i*.05,i*50);
     if(run.phase==='challenge' && submitDirection(pool,run,run.challenge.sequence[run.challenge.index],state)?.type==='caught')caught++;
-    if(run.phase==='done')break;
+    if(caught===2)break;
   }
-  assert.equal(caught,1);assert.equal(state.total,1);assert.equal(state.baitStock[0],19);
-  assert.equal(run.count,1);assert.equal(run.phase,'done');
-  assert.ok(pool.filter(f=>f.respawn<=0).every(f=>f.mode==='routine'));
+  assert.equal(caught,2);assert.equal(state.total,2);assert.equal(state.baitStock[0],19);
+  assert.equal(run.count,2);assert.equal(run.phase,'fishing');
+  assert.equal(run.catches[pool[0].species.id],2);
 });
-test('successful capture consumes exactly one bait, rewards one fish and returns hook automatically',()=>{
+test('successful capture rewards a fish and leaves the cast active',()=>{
   const {s,run,hook,f,events}=simulate(SPECIES[0]);
-  assert.equal(s.baitStock[0],19);assert.equal(s.total,1);assert.equal(run.count,1);assert.equal(run.phase,'done');
-  assert.deepEqual(events.map(e=>e.type),['caught','returned']);assert.ok(Math.hypot(hook.x-RETURN_POINT.x,hook.y-RETURN_POINT.y)<2);
+  assert.equal(s.baitStock[0],19);assert.equal(s.total,1);assert.equal(run.count,1);assert.equal(run.phase,'fishing');
+  assert.deepEqual(events.map(e=>e.type),['caught']);
   const coins=s.coins;for(let i=0;i<100;i++)stepFishing([f],run,hook,s,.05,100,1000);
   assert.equal(s.total,1);assert.equal(s.coins,coins);assert.equal(s.baitStock[0],19);
 });
@@ -92,7 +91,7 @@ test('epic and legendary fish release, flee, return and require longer capture',
   assert.equal(epic.events.filter(e=>e.type==='escaped').length,1);
   assert.equal(legend.events.filter(e=>e.type==='escaped').length,2);
   for(const result of [epic,legend]){
-    assert.equal(result.run.phase,'done');assert.equal(result.s.total,1);assert.equal(result.s.baitStock[0],19);
+    assert.equal(result.run.phase,'fishing');assert.equal(result.s.total,1);assert.equal(result.s.baitStock[0],19);
     assert.ok(result.events.find(e=>e.type==='caught').at>common.events.find(e=>e.type==='caught').at+4);
   }
 });
@@ -110,13 +109,13 @@ test('old saves migrate once; zero stocks and research survive subsequent reload
   const reload=normalizeSave(JSON.parse(JSON.stringify(migrated)),0);
   assert.deepEqual(reload.baitStock,[0,0,0,0,0]);assert.equal(reload.recall,4);assert.equal(createCast(reload),null);
 });
-test('all twenty fish appear in the population and complete the full capture cycle',()=>{
+test('all twenty fish appear in the population and can be captured',()=>{
   const pool=createFishPool();
   assert.equal(SPECIES.length,20);
   for(const species of SPECIES){
     assert.ok(pool.some(f=>f.species.id===species.id),species.name+' must spawn');
     const result=simulate(species);
-    assert.equal(result.run.phase,'done',species.name+' must return');
+    assert.equal(result.run.phase,'fishing',species.name+' must be captured');
     assert.equal(result.s.catches[species.id],1,species.name+' must be catchable');
     assert.equal(result.s.baitStock[0],19);
   }

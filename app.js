@@ -184,7 +184,7 @@ function cast() {
   $('touch-controls').hidden = !matchMedia('(pointer:coarse)').matches;
   $('pulse-button').hidden = !has(state,'pulse');
   drawScene(simulationTime);
-  toast('물고기 가까이 바늘을 두고 잠시 기다리세요. 걸리면 방향키를 입력하세요.'); playTone(330);
+  toast('물고기 가까이 바늘을 두고 잠시 기다리세요. 잡은 뒤에도 계속 낚을 수 있어요.'); playTone(330);
 }
 function finish() {
   if (!session) return;
@@ -192,7 +192,7 @@ function finish() {
   $('sea-intro').hidden = false; $('session-hud').hidden = true; $('reel-button').disabled = true;
   $('touch-controls').hidden = true; $('pulse-button').hidden = true;
   $('catch-challenge').hidden=true;
-  $('result-content').innerHTML = Object.entries(finished.catches).map(([id,n]) => `<div class="result-row"><span>${SPECIES.find(s=>s.id===id).name}</span><b>${n}마리</b></div>`).join('') + `<div class="result-total">${finished.count}마리 · ✦ ${format(finished.coins)} 코인</div><p>${finished.count ? '미끼 1개 소모 · 바늘 회수 완료 · 판매 금액 정산 완료' : '방향키 또는 화면을 누르고 끌어 바늘을 조작해 보세요.'}</p>`;
+  $('result-content').innerHTML = Object.entries(finished.catches).map(([id,n]) => `<div class="result-row"><span>${SPECIES.find(s=>s.id===id).name}</span><b>${n}마리</b></div>`).join('') + `<div class="result-total">${finished.count}마리 · ✦ ${format(finished.coins)} 코인</div><p>${finished.count ? '이번 투척에서 미끼 1개 소모 · 판매 금액 정산 완료' : '방향키 또는 화면을 누르고 끌어 바늘을 조작해 보세요.'}</p>`;
   $('result-dialog').showModal(); save(); refresh();drawScene(simulationTime);
 }
 function pulse() {
@@ -259,12 +259,13 @@ function handleFishingEvent(event){
     toast(event.fish.species.name+'가 바늘을 놓았어요. 재접근하면 남은 방향키를 이어서 입력하세요.');
   }
   if(event?.type==='caught'){
-    $('session-count').textContent='1';$('reel-button').disabled=true;
-    $('catch-popup').innerHTML=event.fish.species.name+'<small>+'+event.reward.coins+' 코인 · 미끼 1개 소모 · 자동 회수 중</small>';
+    $('session-count').textContent=String(session.count);
+    $('touch-controls').hidden=!matchMedia('(pointer:coarse)').matches;$('pulse-button').hidden=!has(state,'pulse');
+    $('catch-popup').innerHTML=event.fish.species.name+'<small>+'+event.reward.coins+' 코인 · 계속 낚시 가능</small>';
     $('catch-popup').classList.add('show');clearTimeout(popupTimeout);popupTimeout=setTimeout(()=>$('catch-popup').classList.remove('show'),2200);
     playTone(700);save();refresh();
   }
-  if(event?.type==='returned'||event?.type==='timeout')finish();
+  if(event?.type==='timeout')finish();
 }
 
 function update(dt,t) {
@@ -288,7 +289,7 @@ function update(dt,t) {
   handleFishingEvent(event);renderChallenge();
   if(session){
     const target=session.target,alertCount=fishPopulation.filter(f=>f.respawn<=0 && f.mode!=='routine').length;
-    $('target-status').textContent=session.phase==='reeling'?'바늘 자동 회수 중':session.phase==='challenge'?target.species.name+' · 방향키 입력 중':(alertCount>1?alertCount+'마리 반응 · ':'')+(target?.mode==='fleeing'?target.species.name+' · 재접근 '+target.escapeLeft.toFixed(1)+'초':target?.biteWait>0?target.species.name+' · 입질 기다리는 중':target?target.species.name+' · 돌진 중':'물고기에 가까이 다가가세요');
+    $('target-status').textContent=session.phase==='challenge'?target.species.name+' · 표시된 방향 입력':(alertCount>1?alertCount+'마리 반응 · ':'')+(target?.mode==='fleeing'?target.species.name+' · 재접근 '+target.escapeLeft.toFixed(1)+'초':target?.biteWait>0?target.species.name+' · 입질 기다리는 중':target?target.species.name+' · 돌진 중':'물고기에 가까이 다가가세요');
   }
 }
 function drawFish(k,s,x,y,dir,size,alpha=1) {
@@ -331,7 +332,6 @@ function drawScene(t) {
     if(session && f.progress>0)pixelRing(ctx,f.x,f.y,f.species.size+14,'#f4df95',f.progress);
   }
   if(session){
-    if(session.phase==='reeling' && session.target)drawPixelFish(ctx,session.target.species,hook.x+18,hook.y+16,1,session.target.species.size,1,t);
     const x=Math.round(hook.x/2)*2,y=Math.round(hook.y/2)*2;
     pixelLine(ctx,RETURN_POINT.x,66,x,y-12,'#cee2bc');
     if(session.pulse>0)pixelRing(ctx,x,y,stats(state).radius*(.85+Math.sin(t*5)*.1),'#badd96');

@@ -1,5 +1,5 @@
 import { SPECIES, stats, patternPosition, returnDelay, awardCatch } from './game-core.js';
-import { WORLD, RETURN_POINT } from './world.js';
+import { WORLD } from './world.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const DIRECTIONS=['up','down','left','right'];
 export function catchDifficulty(species){return [3,5,7,10,14][species.rarity];}
@@ -7,7 +7,7 @@ function makeChallenge(fish,state,hook){
   return {fish,origin:{...hook},sequence:Array.from({length:catchDifficulty(fish.species)},()=>DIRECTIONS[Math.floor(Math.random()*4)]),index:0,guards:Math.floor((stats(state).grip-1)*3),feedback:'표시된 방향을 순서대로 눌러 주세요.'};
 }
 export function submitDirection(pool,run,direction,state){
-  if(run?.phase!=='challenge'||!DIRECTIONS.includes(direction)||run.landed)return null;
+  if(run?.phase!=='challenge'||!DIRECTIONS.includes(direction))return null;
   const challenge=run.challenge,fish=challenge?.fish;
   if(!fish||run.target!==fish)return null;
   if(direction!==challenge.sequence[challenge.index]){
@@ -18,11 +18,14 @@ export function submitDirection(pool,run,direction,state){
   challenge.index++;fish.progress=challenge.index/challenge.sequence.length;
   challenge.feedback='좋아요! 다음 방향을 눌러 주세요.';
   if(challenge.index===challenge.sequence.length){
-    if(state.baitStock[run.bait]<1){run.phase='done';return {type:'timeout'};}
-    state.baitStock[run.bait]--;run.landed=true;run.phase='reeling';
-    const reward=awardCatch(state,fish.species);run.count=1;run.coins=reward.coins;run.catches[fish.species.id]=1;
-    fish.respawn=7;
-    for(const other of pool)if(other!==fish){other.mode='routine';other.progress=0;other.escapeLeft=0;other.escapes=0;}
+    if(!run.baitUsed){
+      if(state.baitStock[run.bait]<1){run.phase='done';return {type:'timeout'};}
+      state.baitStock[run.bait]--;run.baitUsed=true;
+    }
+    const reward=awardCatch(state,fish.species);
+    run.count++;run.coins+=reward.coins;run.catches[fish.species.id]=(run.catches[fish.species.id]||0)+1;
+    fish.respawn=18;fish.progress=0;fish.biteWait=0;fish.escapeLeft=0;fish.escapes=0;fish.mode='routine';
+    run.target=null;run.challenge=null;run.phase='fishing';run.catchPause=.6;
     return {type:'caught',fish,reward};
   }
   const thresholds=fish.species.rarity===4?[.3,.65]:fish.species.rarity===3?[.45]:[];
@@ -58,18 +61,14 @@ export function createFishPool() {
 }
 export function createCast(state,now=Date.now()) {
   if(!(state.baitStock[state.bait]>0))return null;
-  return {started:now,duration:stats(state).duration,bait:state.bait,phase:'fishing',target:null,count:0,coins:0,catches:{},cooldown:0,pulse:0,landed:false};
+  return {started:now,duration:stats(state).duration,bait:state.bait,phase:'fishing',target:null,count:0,coins:0,catches:{},cooldown:0,pulse:0,catchPause:0,baitUsed:false};
 }
 export function biteDelay(species){return 1.2+species.rarity*.35;}
 function move(f,target,speed,dt){const dx=target.x-f.x,dy=target.y-f.y,d=Math.hypot(dx,dy),step=Math.min(d,speed*dt);if(d){f.x+=dx/d*step;f.y+=dy/d*step;}}
 export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
-  if(run?.phase==='reeling') {
-    move(hook,RETURN_POINT,900,dt);
-    if(Math.hypot(hook.x-RETURN_POINT.x,hook.y-RETURN_POINT.y)<2){run.phase='done';return {type:'returned'};}
-    return null;
-  }
   if(run?.phase==='done')return null;
   if(run && now-run.started>=run.duration*1000){run.phase='done';return {type:'timeout'};}
+  if(run)run.catchPause=Math.max(0,run.catchPause-dt);
   const config=stats(state);
   const pending=fish=>run?.challenge?.fish===fish && Math.hypot(hook.x-run.challenge.origin.x,hook.y-run.challenge.origin.y)<=config.radius*2;
   const alert=fish=>run && (pending(fish) || noticesHook(fish,hook,state) || (fish.mode!=='routine' && Math.hypot(fish.x-hook.x,fish.y-hook.y)<=config.radius*2));
@@ -95,7 +94,7 @@ export function stepFishing(pool,run,hook,state,dt,time,now=Date.now()) {
       }else{
         f.mode='chasing';move(f,withinTerritory(f,hook),(90-f.species.rarity*9)*config.attraction*(run.pulse>0?1.8:1),dt);
         if(run.phase==='fishing' && run.target===f && Math.hypot(f.x-hook.x,f.y-hook.y)<=config.catchRadius+f.species.size*.35){
-          f.biteWait+=dt;
+          if(run.catchPause===0)f.biteWait+=dt;
           if(f.biteWait>=biteDelay(f.species)){
             f.biteWait=0;f.mode='attached';run.phase='challenge';
             if(run.challenge?.fish!==f)run.challenge=makeChallenge(f,state,hook);

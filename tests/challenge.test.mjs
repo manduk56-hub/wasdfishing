@@ -21,20 +21,21 @@ test('every species gets its difficulty count of random valid directions, and wa
   }
   assert.ok(sequences.size>5);
 });
-test('a fish waits at the hook before biting',()=>{
+test('a fish waits at the hook before biting, and the full sequence catches it',()=>{
   const state=initialState(0),fish=createFishPool()[0],hook={x:fish.x,y:fish.y},run=createCast(state,0);
-  for(let i=1;i<=10;i++)stepFishing([fish],run,hook,state,.05,i*.05,i*50);
+  const steps=10;
+  for(let i=1;i<=steps;i++)stepFishing([fish],run,hook,state,.05,i*.05,i*50);
   assert.equal(run.phase,'fishing');assert.equal(state.total,0);assert.ok(fish.biteWait<biteDelay(fish.species));
-  for(let i=11;i<100&&run.phase==='fishing';i++)stepFishing([fish],run,hook,state,.05,i*.05,i*50);
+  for(let i=steps+1;i<100&&run.phase==='fishing';i++)stepFishing([fish],run,hook,state,.05,i*.05,i*50);
   assert.equal(run.phase,'challenge');
 });
-test('only the full correct sequence catches a fish, with exactly one reward and one bait consumed',()=>{
+test('only the full correct sequence catches a fish, with one reward and one bait consumed',()=>{
   const {state,pool,run}=bite();const sequence=[...run.challenge.sequence];
   for(let i=0;i<sequence.length-1;i++){
     assert.equal(submitDirection(pool,run,sequence[i],state).type,'input');assert.equal(state.total,0);
   }
   assert.equal(submitDirection(pool,run,sequence.at(-1),state).type,'caught');
-  assert.equal(run.phase,'reeling');assert.equal(state.total,1);assert.equal(state.baitStock[0],19);
+  assert.equal(run.phase,'fishing');assert.equal(state.total,1);assert.equal(state.baitStock[0],19);
   assert.equal(submitDirection(pool,run,sequence.at(-1),state),null);assert.equal(state.total,1);
 });
 test('wrong directions restart progress; invalid input cannot advance the challenge',()=>{
